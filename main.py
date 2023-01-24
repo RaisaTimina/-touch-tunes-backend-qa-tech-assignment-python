@@ -7,18 +7,7 @@ import string
 
 
 def random_string():
-    randomPasswordString = (''.join((random.choice(string.ascii_letters) for i in range(16))))
-    return randomPasswordString
-
-
-def random_number_under_limit():
-    randomNumberUnder = (random.randint(1, 100))
-    return randomNumberUnder
-
-
-def random_number_over_limit():
-    randomNumberOver = (random.randint(101, 201))
-    return randomNumberOver
+    return ''.join((random.choice(string.ascii_letters) for i in range(16)))
 
 
 class TestDiscogs(unittest.TestCase):
@@ -26,7 +15,7 @@ class TestDiscogs(unittest.TestCase):
     secret = "sNbIErqcWrSRWmiPeAJXXHZUGsWMGQwx"
     discog_url = "https://api.discogs.com/database"
     content_type = "application/x-www-form-urlencoded"
-    dataList = [0, 1, 10, 100, "1 ", "1 !", "!@", "", " ", "tomato", "tomato1", "tomATo", "ToMato2", "To Ma To",
+    testValues = [0, 1, 10, 100, "1 ", "1 !", "!@", "", " ", "tomato", "tomato1", "tomATo", "ToMato2", "To Ma To",
                 "tO Ma To16", "TOMATOOO", "TOMATO3", "TOMATO$23", "TOMATO ", "password1234", "tomato?", "2tomatoS!"]
 
     @classmethod
@@ -37,28 +26,19 @@ class TestDiscogs(unittest.TestCase):
             "Authorization": auth
         }
 
-    # check if connection works when both key and secret are correct
-    def test_basic_response(self):
+    def test_search_successful_when_authorized(self):
         res = requests.get("{}/search".format(self.discog_url), headers=self.headers)
 
         self.assertEqual(res.status_code, 200)
-        self.assertIsNotNone(res.json())
-
-    # check if we can get to an id successfully when both key and secret are correct
-    def test_search_successful_when_authorized(self):
-        res = requests.get("{}/search".format(self.discog_url), headers=self.headers)
 
         resultsResponse = res.json()
         resultsObject = resultsResponse['results']
         for i in resultsObject:
-            self.assertIsNotNone(i["id"])
-            time.sleep(60 / 60)
+            self.assertIsNotNone(i["id"])  # check we can get to an id successfully when both key and secret are correct
 
-        self.assertEqual(res.status_code, 200)
-
-    # check if get response when both KEY and SECRET are NOT correct
+    # check if get error when both KEY and SECRET are NOT correct
     # check with random string
-    def test_both_bad_credentials_random(self):
+    def test_bad_key_and_bad_secret_random(self):
         badAuth = "Discogs key={}, secret={}".format(random_string(), random_string())
         self.badHeaders = {
             "Content-Type": self.content_type,
@@ -68,9 +48,9 @@ class TestDiscogs(unittest.TestCase):
 
         self.assertEqual(res.status_code, 401)
 
-    # check with an array of hardcoded possible passwords
+    # check with an array of hardcoded possible values
     def test_bad_key_and_bad_secret(self):
-        for value in self.dataList:
+        for value in self.testValues:
             with self.subTest(value=value):
                 badSecretAuth = "Discogs key={}, secret={}".format(value, value)
                 badSecretHeaders = {
@@ -79,9 +59,9 @@ class TestDiscogs(unittest.TestCase):
                 }
                 res = requests.get("{}/search".format(self.discog_url), headers=badSecretHeaders)
                 self.assertEqual(res.status_code, 401)
-                time.sleep(60 / 60)
+                time.sleep(1)  # due to the requests limit (60/minute) had to slow the process down
 
-    # check if get response when KEY is NOT correct
+    # check if get error when KEY is NOT correct
     # check with random string
     def test_bad_key_only_random(self):
         badKeyAuth = "Discogs key={}, secret={}".format(random_string(), self.secret)
@@ -94,9 +74,9 @@ class TestDiscogs(unittest.TestCase):
 
         self.assertEqual(res.status_code, 401)
 
-    # check with an array of hardcoded possible passwords
+    # check with an array of hardcoded possible values
     def test_bad_key_only(self):
-        for value in self.dataList:
+        for value in self.testValues:
             with self.subTest(value=value):
                 badSecretAuth = "Discogs key={}, secret={}".format(value, self.secret)
                 badSecretHeaders = {
@@ -105,9 +85,9 @@ class TestDiscogs(unittest.TestCase):
                 }
                 res = requests.get("{}/search".format(self.discog_url), headers=badSecretHeaders)
                 self.assertEqual(res.status_code, 401)
-                time.sleep(60 / 60)
+                time.sleep(1)  # due to the requests limit (60/minute) had to slow the process down
 
-    # check if get response when SECRET is NOT correct
+    # check if get error when SECRET is NOT correct
     # check with random string
     def test_bad_secret_only_random(self):
         badSecretAuth = "Discogs key={}, secret={}".format(self.key, random_string())
@@ -118,9 +98,9 @@ class TestDiscogs(unittest.TestCase):
         res = requests.get("{}/search".format(self.discog_url), headers=badSecretHeaders)
         self.assertEqual(res.status_code, 401)
 
-    # check with an array of hardcoded possible passwords
+    # check with an array of hardcoded possible values
     def test_bad_secret_only(self):
-        for value in self.dataList:
+        for value in self.testValues:
             with self.subTest(value=value):
                 badSecretAuth = "Discogs key={}, secret={}".format(self.key, value)
                 badSecretHeaders = {
@@ -129,24 +109,22 @@ class TestDiscogs(unittest.TestCase):
                 }
                 res = requests.get("{}/search".format(self.discog_url), headers=badSecretHeaders)
                 self.assertEqual(res.status_code, 401)
-                time.sleep(60 / 60)
+                time.sleep(1)  # due to the requests limit (60/minute) had to slow the process down
 
     # check if returns default number of record per pages when LIMIT is NOT specified
-    def test_limit_per_page_not_specified(self):
+    def test_returns_default_num_records_when_limit_per_page_not_specified(self):
         res = requests.get("{}/search".format(self.discog_url), headers=self.headers)
 
-        paginationResponse = res.json()
-        paginationArray = paginationResponse['pagination']
-        paginationPerPage = paginationArray['per_page']
+        response = res.json()
+        paginationPerPage = response['pagination']['per_page']
 
-        resultsResponse = res.json()
-        resultsObject = resultsResponse['results']
+        resultsObject = response['results']
         self.assertEqual(paginationPerPage, len(resultsObject))
 
     # check api returns the requested number of records per pages when LIMIT specified
     # check requested number of records per page matches the RANDOMly generated limit
-    def test_limit_per_page_specified_random(self):
-        value = random_number_under_limit()
+    def test_returns_requested_num_records_when_limit_per_page_specified_random(self):
+        value = random.randint(1, 101)
         res = requests.get("{}/search?per_page={}".format(self.discog_url, value),
                            headers=self.headers)
 
@@ -155,7 +133,7 @@ class TestDiscogs(unittest.TestCase):
         self.assertEqual(value, len(resultsObject))
 
     # check requested number of records per page matches GIVEN limit from 1 to 100
-    def test_limit_per_page_specified_from_1_to_100(self):
+    def test_returns_requested_num_records_when_limit_per_page_specified_from_1_to_100(self):
         for value in range(1, 101):
             with self.subTest(value=value):
                 res = requests.get("{}/search?per_page={}".format(self.discog_url, value), headers=self.headers)
@@ -163,11 +141,11 @@ class TestDiscogs(unittest.TestCase):
                 resultsResponse = res.json()
                 resultsObject = resultsResponse['results']
                 self.assertEqual(value, len(resultsObject))
-                time.sleep(60 / 60)  # due to the requests limit (60/minute) had to slow the process down
+                time.sleep(1)  # due to the requests limit (60/minute) had to slow the process down
 
     # check the number of records per page will stay at the maximum (100) if given a number above RANDOMly generated
-    def test_pages_over_limit_random(self):
-        res = requests.get("{}/search?per_page={}".format(self.discog_url, random_number_over_limit()),
+    def test_returns_max_num_records_when_limit_per_page_too_large(self):
+        res = requests.get("{}/search?per_page={}".format(self.discog_url, random.randint(101, 201)),
                            headers=self.headers)
         resultsResponse = res.json()
         resultsObject = resultsResponse['results']
